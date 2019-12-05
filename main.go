@@ -29,6 +29,7 @@ func main() {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		wg.Add(1)
 		go func ()  {
 			links, err := Grabber(scanner.Text())
 			if err != nil{
@@ -40,10 +41,10 @@ func main() {
 
 			}	
 		}()
-		wg.Add(1)
+		wg.Wait()
 		
 	}
-	wg.Wait()
+	
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
