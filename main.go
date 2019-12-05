@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,6 +13,7 @@ import (
 )
 
 var wg sync.WaitGroup
+var mt sync.Mutex
 
 // Final Literation
 func main() {
@@ -21,30 +21,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	outfile, err := os.Create("urls.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer outfile.Close()
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		go Grabber(scanner.Text())
 		wg.Add(1)
-		go func ()  {
-			links, err := Grabber(scanner.Text())
-			if err != nil{
-				
-			}
-			for _, url := range links{
-				fmt.Println(url)
-				fmt.Fprintln(outfile,url)
 
-			}	
-		}()
-		wg.Wait()
-		
 	}
-	
+	wg.Wait()
+
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -61,10 +46,16 @@ func stringInArray(a string, list []string) bool {
 }
 
 // Grabber Do Search the bing and collect array of sitelist
-func Grabber(ip string) (output []string, err error) {
+func Grabber(ip string) {
 	defer wg.Done()
+	var output []string
+	outfile, err := os.Create("urls.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer outfile.Close()
 	if ip == "" {
-		return output, errors.New("Empty Field Given")
+
 	}
 	page := 1
 	for page < 251 {
@@ -78,17 +69,17 @@ func Grabber(ip string) (output []string, err error) {
 			nil,
 		)
 		if err != nil {
-			return output, err
+
 		}
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:57.0) Gecko/20100101 Firefox/57.0")
 		res, err := client.Do(req)
 		if err != nil {
-			return output, err
+			fmt.Println("Invalid Request")
 		}
 		defer res.Body.Close()
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return output, err
+			fmt.Println("Couldn't Read")
 		}
 		re := regexp.MustCompile(`<h2><a href="(.*?)"`)
 		links := re.FindAllString(string(body), -1)
@@ -104,5 +95,8 @@ func Grabber(ip string) (output []string, err error) {
 		}
 		page = page + 50
 	}
-	return output, nil
+	for _, links := range output {
+		fmt.Println(links)
+		fmt.Fprintf(outfile, links+"\n")
+	}
 }
