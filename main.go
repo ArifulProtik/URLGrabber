@@ -1,34 +1,67 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
+	"sync"
 )
-// Test 
+
+var wg sync.WaitGroup
+
+// Final Literation
 func main() {
-	result, err := Grabber("103.253.145.35")
+	file, err := os.Open("ip.txt")
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
-	for  i := range result{
-		fmt.Println(result[i])
+	outfile, err := os.Create("urls.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer outfile.Close()
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		go func ()  {
+			links, err := Grabber(scanner.Text())
+			if err != nil{
+				
+			}
+			for _, url := range links{
+				fmt.Println(url)
+				fmt.Fprintln(outfile,url)
+
+			}	
+		}()
+		wg.Add(1)
+		
+	}
+	wg.Wait()
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
 	}
 }
-// StringInArray do If string in list return true false otherwise.
-func StringInArray(a string, list []string) bool {
-    for _, b := range list {
-        if b == a {
-            return true
-        }
-    }
-    return false
+
+// stringInArray do If string in list return true false otherwise.
+func stringInArray(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
+
 // Grabber Do Search the bing and collect array of sitelist
 func Grabber(ip string) (output []string, err error) {
+	defer wg.Done()
 	if ip == "" {
 		return output, errors.New("Empty Field Given")
 	}
@@ -60,10 +93,10 @@ func Grabber(ip string) (output []string, err error) {
 		links := re.FindAllString(string(body), -1)
 		if links != nil {
 			for l := range links {
-				o := strings.Split(links[l],`"`)
-				d := strings.Split(o[1],"/")
-				s := d[0]+"//"+d[2]
-				if !StringInArray(s, output) {
+				o := strings.Split(links[l], `"`)
+				d := strings.Split(o[1], "/")
+				s := d[0] + "//" + d[2]
+				if !stringInArray(s, output) {
 					output = append(output, s)
 				}
 			}
