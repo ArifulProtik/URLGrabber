@@ -78,7 +78,7 @@ func Grabber(ip string, results chan []string) {
             nil,
         )
         if err != nil {
-
+			continue
         }
         req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:57.0) Gecko/20100101 Firefox/57.0")
         res, err := client.Do(req)
