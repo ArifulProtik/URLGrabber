@@ -12,7 +12,11 @@ import (
 	"strings"
 	"sync"
 )
-
+const (
+    // this is where you can specify how many maxFileDescriptors
+    // you want to allow open
+    maxFileDescriptors = 1000
+)
 var wg sync.WaitGroup
 
 // Final Literation
@@ -27,7 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer outfile.Close()
-	results := make(chan []string)
+	results := make(chan []string, maxFileDescriptors)
 	go func() {
 		for output := range results {
 			for _, url := range output {
@@ -38,8 +42,8 @@ func main() {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+        wg.Add(1)
 		go Grabber(scanner.Text(), results)
-		wg.Add(1)
 
 	}
 	wg.Wait()
