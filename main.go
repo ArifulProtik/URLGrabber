@@ -38,6 +38,7 @@ func main() {
 				fmt.Fprintln(outfile, url)
 			}
 		}
+		close(results)
 	}()
 
 	scanner := bufio.NewScanner(file)
@@ -47,7 +48,6 @@ func main() {
 
 	}
 	wg.Wait()
-	close(results)
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
