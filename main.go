@@ -11,13 +11,18 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/anikhasibul/queue"
 )
+
 const (
-    // this is where you can specify how many maxFileDescriptors
-    // you want to allow open
-    maxFileDescriptors = 1000
+	// this is where you can specify how many maxFileDescriptors
+	// you want to allow open
+	maxFileDescriptors = 1000
 )
+
 var wg sync.WaitGroup
+var q = queue.New(1000)
 
 // Final Literation
 func main() {
@@ -43,8 +48,9 @@ func main() {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-        wg.Add(1)
-		go Grabber(scanner.Text(), results)
+		wg.Add(1)
+		q.Add()
+		go Grabber(q, scanner.Text(), results)
 
 	}
 	wg.Wait()
@@ -65,7 +71,8 @@ func stringInArray(a string, list []string) bool {
 }
 
 // Grabber Do Search the bing and collect array of sitelist
-func Grabber(ip string, results chan []string) {
+func Grabber(q *queue.Q, ip string, results chan []string) {
+	defer q.Done()
 	defer wg.Done()
 	var output []string
 	if ip == "" {
@@ -88,8 +95,8 @@ func Grabber(ip string, results chan []string) {
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:57.0) Gecko/20100101 Firefox/57.0")
 		res, err := client.Do(req)
 		if err != nil {
-            fmt.Println("Invalid Request")
-            return
+			fmt.Printf("Invalid Request. ERR: %v \n", err)
+			return
 		}
 		defer res.Body.Close()
 		body, err := ioutil.ReadAll(res.Body)
